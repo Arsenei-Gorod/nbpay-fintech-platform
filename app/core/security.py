@@ -31,6 +31,8 @@ def _base_claims(
         "jti": str(uuid4()),
         "iat": int(datetime.now(timezone.utc).timestamp()),
     }
+    # Bind not-before to issued-at to prevent early use
+    claims["nbf"] = claims["iat"]
     if settings.TOKEN_ISSUER:
         claims["iss"] = settings.TOKEN_ISSUER
     if settings.TOKEN_AUDIENCE:
@@ -73,7 +75,12 @@ def decode_token(token: str) -> dict[str, Any]:
             token,
             settings.SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
-            options={"require_exp": True, "verify_aud": bool(settings.TOKEN_AUDIENCE)},
+            options={
+                "require_exp": True,
+                "require_iat": True,
+                "require_nbf": True,
+                "verify_aud": bool(settings.TOKEN_AUDIENCE),
+            },
             audience=settings.TOKEN_AUDIENCE,
             issuer=settings.TOKEN_ISSUER,
         )

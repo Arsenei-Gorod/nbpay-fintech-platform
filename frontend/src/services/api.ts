@@ -36,7 +36,8 @@ api.interceptors.response.use(
   (resp) => resp,
   async (error) => {
     const original: any = error.config
-    if (error.response?.status === 401 && !original?._retry && refreshToken) {
+    const isAuthEndpoint = typeof original?.url === 'string' && (original.url.includes('/auth/refresh') || original.url.includes('/auth/login'))
+    if (error.response?.status === 401 && !original?._retry && refreshToken && !isAuthEndpoint) {
       if (isRefreshing) {
         await new Promise<void>((resolve) => pendingQueue.push(resolve))
         return api(original)

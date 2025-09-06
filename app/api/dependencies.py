@@ -127,12 +127,15 @@ def require_roles(*roles: Role) -> Callable[[UserReadDTO], UserReadDTO]:
         current: UserReadDTO = Depends(require_current_user()),
         token: str = Depends(oauth2),
     ) -> UserReadDTO:
-        try:
-            payload = decode_token(token)
-            claim_role = payload.get("role")
-            effective_role = Role(claim_role) if claim_role else Role(current.role)  # type: ignore[arg-type]
-        except Exception:
-            effective_role = Role(current.role)  # type: ignore[arg-type]
+        settings = get_settings()
+        effective_role = Role(current.role)  # type: ignore[arg-type]
+        if settings.TRUST_TOKEN_ROLE:
+            try:
+                payload = decode_token(token)
+                claim_role = payload.get("role")
+                effective_role = Role(claim_role) if claim_role else effective_role  # type: ignore[arg-type]
+            except Exception:
+                pass
         if roles and effective_role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=_("insufficient privileges")

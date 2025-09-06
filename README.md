@@ -215,3 +215,18 @@ docker compose --profile dev restart backend
 ```bash
 uv run pytest -q
 ```
+
+## Security
+
+- SECRET_KEY: set a strong random value (>= 32 chars) in non-dev; the app refuses to start in non-dev if the key is weak/default.
+- HTTPS: enable `REQUIRE_HTTPS=true` in production to reject plain HTTP requests.
+- JWT claims: access/refresh tokens include `jti`, `iat`, `nbf`, `exp` (+ `iss`/`aud` if configured). Validation requires `exp`, `iat`, `nbf` and verifies `iss`/`aud` when set.
+- Role claims: by default `TRUST_TOKEN_ROLE=true` allows role claims in tokens to gate admin endpoints. For maximum safety, set `TRUST_TOKEN_ROLE=false` to rely only on the role from the database.
+
+## Frontend auth integration
+
+- The dev frontend in `frontend/` stores `access_token`/`refresh_token` in `localStorage` and injects `Authorization: Bearer <access>` on requests.
+- On 401, it attempts to refresh via `POST /api/v1/auth/refresh?refresh_token=...` and retries the original request. The interceptor avoids looping on `/auth/login` and `/auth/refresh`.
+- Logout calls `POST /api/v1/auth/logout` with both tokens so the backend can revoke them; the client then clears local storage and redirects to `/login`.
+
+Recommended prod hardening: set `REQUIRE_HTTPS=true` and `TRUST_TOKEN_ROLE=false`, and prefer HTTP-only secure cookies over localStorage if you later add a server-side session facade.
