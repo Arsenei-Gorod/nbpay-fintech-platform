@@ -230,3 +230,23 @@ uv run pytest -q
 - Logout calls `POST /api/v1/auth/logout` with both tokens so the backend can revoke them; the client then clears local storage and redirects to `/login`.
 
 Recommended prod hardening: set `REQUIRE_HTTPS=true` and `TRUST_TOKEN_ROLE=false`, and prefer HTTP-only secure cookies over localStorage if you later add a server-side session facade.
+
+## Management commands
+
+Create a superuser (requires `DATABASE_URL` configured):
+
+```bash
+uv run python -m app.cli.manage create-superuser \
+  --email admin@example.com \
+  --full-name "Admin User"
+# You will be prompted for a password (or pass --password "...")
+```
+
+Use `--upgrade-if-exists` to promote an existing account to admin:
+
+```bash
+uv run python -m app.cli.manage create-superuser \
+  --email admin@example.com \
+  --full-name "Admin User" \
+  --upgrade-if-exists
+```

@@ -96,3 +96,23 @@ REDIS_URL="redis://redis:6379/0"
 - Убедитесь, что reverse‑proxy (например, Nginx/Traefik) корректно прокидывает заголовки и схему (`X-Forwarded-Proto=https`) при использовании `REQUIRE_HTTPS=true`.
 - Значения `TOKEN_ISSUER`/`TOKEN_AUDIENCE` должны соответствовать вашим клиентам и проверяются на декодировании JWT.
 - `SECRET_KEY` должен быть криптографически стойким и длиной не менее 32 символов; в `ENV != dev` приложение не стартует с дефолтным/коротким ключом.
+
+## Создание суперпользователя (admin)
+
+CLI-команда (требуется настроенный `DATABASE_URL`):
+
+```
+uv run python -m app.cli.manage create-superuser \
+  --email admin@example.com \
+  --full-name "Admin User"
+# Пароль будет запрошен интерактивно (или передайте --password "...")
+```
+
+Чтобы повысить роль существующего пользователя до admin:
+
+```
+uv run python -m app.cli.manage create-superuser \
+  --email admin@example.com \
+  --full-name "Admin User" \
+  --upgrade-if-exists
+```
