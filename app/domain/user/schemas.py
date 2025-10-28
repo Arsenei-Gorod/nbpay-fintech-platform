@@ -46,3 +46,16 @@ class TokenDTO(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class PasswordResetRequestDTO(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmDTO(BaseModel):
+    token: str = Field(min_length=10)
+    password: str = Field(min_length=6)
+
+
+class PasswordResetTokenDTO(BaseModel):
+    token: str

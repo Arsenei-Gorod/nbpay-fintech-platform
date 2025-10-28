@@ -12,6 +12,7 @@ from app.domain.user.schemas import (
     UserUpdateDTO,
 )
 from app.utils.exceptions import NotFoundError
+from app.infrastructure.cache.password_reset_store import InMemoryPasswordResetStore
 
 
 def test_create_user_success(service) -> None:
@@ -154,3 +155,27 @@ def test_authenticate_inactive_user_raises(service, repo) -> None:
     service.update(str(reg.id), UserUpdateDTO(full_name="Harry", is_active=False))
     with pytest.raises(ValueError):
         service.authenticate("harry@example.com", "passw0rd")
+
+
+def test_password_reset_success(
+    service, repo, reset_store: "InMemoryPasswordResetStore"
+) -> None:
+    service.register(
+        UserRegisterDTO(
+            email="reset@example.com", full_name="Reset Me", password="secret123"
+        )
+    )
+    token = service.request_password_reset("reset@example.com")
+    assert reset_store.peek(token) is not None
+
+    service.reset_password(token, "newsecret456")
+
+    with pytest.raises(ValueError):
+        service.authenticate("reset@example.com", "secret123")
+    authed = service.authenticate("reset@example.com", "newsecret456")
+    assert authed.email == "reset@example.com"
+
+
+def test_password_reset_invalid_token_raises(service) -> None:
+    with pytest.raises(ValueError):
+        service.reset_password("invalid-token", "whatever123")

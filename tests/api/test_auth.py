@@ -236,6 +236,56 @@ async def test_promote_user_to_admin_endpoint() -> None:
 
 
 @pytest.mark.asyncio
+async def test_password_reset_flow_api() -> None:
+    app = create_app()
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        payload = {
+            "email": "forgot@example.com",
+            "full_name": "Forgot Me",
+            "password": "secret123",
+        }
+        r = await ac.post("/api/v1/auth/register", json=payload)
+        assert r.status_code == 201
+
+        r = await ac.post(
+            "/api/v1/auth/forgot-password", json={"email": payload["email"]}
+        )
+        assert r.status_code == 200
+        token = r.json()["token"]
+        assert token
+
+        r = await ac.post(
+            "/api/v1/auth/reset-password",
+            json={"token": token, "password": "newsecret456"},
+        )
+        assert r.status_code == 204
+
+        r = await ac.post(
+            "/api/v1/auth/login",
+            data={"username": payload["email"], "password": payload["password"]},
+        )
+        assert r.status_code == 401
+
+        r = await ac.post(
+            "/api/v1/auth/login",
+            data={"username": payload["email"], "password": "newsecret456"},
+        )
+        assert r.status_code == 200
+
+        r = await ac.post(
+            "/api/v1/auth/forgot-password", json={"email": "missing@example.com"}
+        )
+        assert r.status_code == 200
+        assert r.json()["token"] == ""
+
+        r = await ac.post(
+            "/api/v1/auth/reset-password",
+            json={"token": "invalid-token", "password": "another123"},
+        )
+        assert r.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_https_only_enforced(monkeypatch) -> None:
     # Enable HTTPS requirement and verify http requests are rejected
     import os

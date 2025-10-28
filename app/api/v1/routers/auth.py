@@ -16,8 +16,16 @@ from app.core.security import (
     ensure_token_type,
 )
 from app.core.config import get_settings
-from app.domain.user.schemas import UserRegisterDTO, UserReadDTO, TokenDTO
+from app.domain.user.schemas import (
+    UserRegisterDTO,
+    UserReadDTO,
+    TokenDTO,
+    PasswordResetRequestDTO,
+    PasswordResetConfirmDTO,
+    PasswordResetTokenDTO,
+)
 from app.core.i18n import _
+from app.utils.exceptions import NotFoundError
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -102,6 +110,43 @@ def refresh_token(
 @router.get("/me", response_model=UserReadDTO)
 def me(current: UserReadDTO = Depends(require_current_user())) -> UserReadDTO:
     return current
+
+
+@router.post("/forgot-password", response_model=PasswordResetTokenDTO)
+def forgot_password(dto: PasswordResetRequestDTO, svc: UserServiceDep) -> PasswordResetTokenDTO:
+    try:
+        token = svc.request_password_reset(dto.email)
+        return PasswordResetTokenDTO(token=token)
+    except NotFoundError:
+        # Не раскрываем наличие пользователя
+        return PasswordResetTokenDTO(token="")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+def reset_password(dto: PasswordResetConfirmDTO, svc: UserServiceDep) -> Response:
+    try:
+        svc.reset_password(dto.token, dto.password)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_("user not found"),
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_("invalid reset token"),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)

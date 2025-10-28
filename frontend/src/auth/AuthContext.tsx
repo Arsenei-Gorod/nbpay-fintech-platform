@@ -23,6 +23,8 @@ type AuthContextType = {
   register: (email: string, fullName: string, password: string) => Promise<void>
   fetchMe: () => Promise<void>
   logout: () => Promise<void>
+  requestPasswordReset: (email: string) => Promise<string | null>
+  confirmPasswordReset: (token: string, password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -100,6 +102,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAuthTokens()
   }
 
+  async function requestPasswordReset(email: string) {
+    setError('')
+    setLoading(true)
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email })
+      return data?.token || null
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Не удалось запросить сброс пароля')
+      throw e
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function confirmPasswordReset(token: string, password: string) {
+    setError('')
+    setLoading(true)
+    try {
+      await api.post('/auth/reset-password', { token, password })
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Не удалось сменить пароль')
+      throw e
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Register unauthorized handler immediately so interceptors can call it even on first requests
   setOnUnauthorized(() => {
     // Clear auth state
@@ -122,8 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextType>(() => ({
     accessToken, refreshToken, user, loading, error, isAuthenticated,
-    initFromStorage, login, register, fetchMe, logout,
-  }), [accessToken, refreshToken, user, loading, error, isAuthenticated])
+    initFromStorage, login, register, fetchMe, logout, requestPasswordReset, confirmPasswordReset,
+  }), [accessToken, refreshToken, user, loading, error, isAuthenticated, requestPasswordReset, confirmPasswordReset])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

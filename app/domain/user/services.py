@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 import structlog
@@ -14,14 +15,21 @@ from app.domain.user.schemas import (
 )
 from app.utils.exceptions import NotFoundError
 from app.core.security import get_password_hash, verify_password
+from app.domain.user.reset_tokens import PasswordResetStore
+from app.core.config import get_settings
 
 
 logger = structlog.get_logger()
 
 
 class UserService:
-    def __init__(self, user_repo: UserRepository) -> None:
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        password_reset_store: PasswordResetStore | None = None,
+    ) -> None:
         self._users = user_repo
+        self._password_resets = password_reset_store
 
     def create(self, dto: UserCreateDTO) -> UserReadDTO:
         if self._users.get_by_email(dto.email):
@@ -82,3 +90,31 @@ class UserService:
         user = self._users.update(user)
         logger.info("user.role_updated", user_id=str(user.id), role=user.role)
         return UserReadDTO.model_validate(user)
+
+    # Password reset flows
+    def request_password_reset(self, email: str) -> str:
+        user = self._users.get_by_email(email)
+        if not user:
+            raise NotFoundError("user not found")
+        if self._password_resets is None:
+            raise RuntimeError("password reset store is not configured")
+        settings = get_settings()
+        token = self._password_resets.issue(
+            str(user.id), ttl_seconds=settings.PASSWORD_RESET_TOKEN_EXPIRES_MIN * 60
+        )
+        logger.info("user.password_reset_requested", user_id=str(user.id))
+        return token
+
+    def reset_password(self, token: str, new_password: str) -> None:
+        if self._password_resets is None:
+            raise RuntimeError("password reset store is not configured")
+        user_id = self._password_resets.consume(token)
+        if not user_id:
+            raise ValueError("invalid reset token")
+        user = self._users.get(UUID(user_id))
+        if not user:
+            raise NotFoundError("user not found")
+        user.password_hash = get_password_hash(new_password)
+        user.updated_at = datetime.utcnow()
+        user = self._users.update(user)
+        logger.info("user.password_reset_completed", user_id=str(user.id))

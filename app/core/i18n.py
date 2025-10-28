@@ -19,6 +19,8 @@ _MANUAL_RU: dict[str, str] = {
     "invalid refresh token": "Неверный токен обновления",
     "insufficient privileges": "Недостаточно прав",
     "HTTPS required": "Требуется HTTPS",
+    "invalid reset token": "Недействительный токен сброса",
+    "user not found": "Пользователь не найден",
 }
 
 
@@ -48,4 +50,3 @@ def gettext_(message: str) -> str:
 
 # Conventional alias
 _: Callable[[str], str] = gettext_
-

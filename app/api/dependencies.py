@@ -12,14 +12,37 @@ from app.infrastructure.repositories.user_sqlalchemy import (
 )
 from app.infrastructure.db.session import get_session
 from app.infrastructure.cache.token_store import InMemoryTokenStore, RedisTokenStore
+from app.infrastructure.cache.password_reset_store import (
+    InMemoryPasswordResetStore,
+    RedisPasswordResetStore,
+)
 from app.core.security import decode_token
 from app.core.i18n import _
 
 
 _MEM_REPO: InMemoryUserRepository | None = None
+_RESET_STORE: InMemoryPasswordResetStore | None = None
 
 
-def get_user_service() -> Generator[UserService, None, None]:
+def get_password_reset_store():
+    settings = get_settings()
+    if settings.REDIS_URL:
+        try:
+            import redis  # type: ignore
+
+            client = redis.Redis.from_url(settings.REDIS_URL)
+            return RedisPasswordResetStore(client)
+        except Exception:  # pragma: no cover - optional backend
+            pass
+    global _RESET_STORE
+    if _RESET_STORE is None:
+        _RESET_STORE = InMemoryPasswordResetStore()
+    return _RESET_STORE
+
+
+def get_user_service(
+    reset_store=Depends(get_password_reset_store),
+) -> Generator[UserService, None, None]:
     """Provide a UserService wired to either SQL repo (if DATABASE_URL set) or a shared in-memory repo.
 
     For in-memory mode, use a module-level singleton so state persists across requests within a process,
@@ -29,12 +52,12 @@ def get_user_service() -> Generator[UserService, None, None]:
     if settings.DATABASE_URL:
         with get_session() as session:
             repo = SQLUserRepository(session)
-            yield UserService(user_repo=repo)
+            yield UserService(user_repo=repo, password_reset_store=reset_store)
     else:
         global _MEM_REPO
         if _MEM_REPO is None:
             _MEM_REPO = InMemoryUserRepository()
-        yield UserService(user_repo=_MEM_REPO)
+        yield UserService(user_repo=_MEM_REPO, password_reset_store=reset_store)
 
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]

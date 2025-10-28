@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     TOKEN_AUDIENCE: str | None = "fastapi_clients"  # значение aud (аудитория)
     REQUIRE_HTTPS: bool = False  # требовать HTTPS и отклонять HTTP-запросы
     TRUST_TOKEN_ROLE: bool = True  # доверять claim роли в токене (иначе — роль только из БД)
+    PASSWORD_RESET_TOKEN_EXPIRES_MIN: int = 30  # срок жизни токена сброса пароля (мин)
 
     # Database (PostgreSQL) — либо указать полный URL, либо части ниже
     DATABASE_URL: str | None = None  # полный URL подключения к БД
