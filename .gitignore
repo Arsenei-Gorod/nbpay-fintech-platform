@@ -1,0 +1,71 @@
+############################
+# OS / Editor / IDE
+############################
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+############################
+# Python / Build Artifacts
+############################
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.nox/
+.tox/
+.hypothesis/
+coverage/
+.coverage*
+coverage.xml
+htmlcov/
+build/
+dist/
+wheels/
+.eggs/
+*.egg-info/
+
+############################
+# Environments / Secrets
+############################
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*.local
+
+############################
+# Node / Frontend (Vite/React)
+############################
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.eslintcache
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+############################
+# MkDocs site (built docs)
+############################
+site/
+
+############################
+# Docker / Compose
+############################
+docker-compose.override.yml
+
+############################
+# i18n compiled catalogs
+############################
+app/locales/**/LC_MESSAGES/*.mo
