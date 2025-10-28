@@ -1,4 +1,4 @@
-# FastAPI Auth Skeleton (Clean Architecture) + UV
+# nbpay-fintech-platform  (Clean Architecture) + UV
 
 Полноценный скелет авторизации на FastAPI: чистая архитектура, JWT access/refresh, роли, i18n, dev‑фронтенд на React + MUI и инструменты для локальной разработки. Управление зависимостями и запуск через UV (Astral).
 
